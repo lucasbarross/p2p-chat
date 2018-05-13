@@ -1,6 +1,6 @@
 import socket
-import json
 import threading
+import atexit
 
 SERVER_TCP_IP = '127.0.0.1'
 SERVER_TCP_PORT = 5000
@@ -18,6 +18,7 @@ class Listener():
         self.socket.listen()
 
     def run(self):
+        self.listen()
         while 1:
             try: 
                 connection, addr = self.socket.accept()
@@ -33,22 +34,22 @@ class Listener():
 class Opener(): 
 
     def __init__(self, username, address):
-        self.address = address
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.address = address
         self.connected = False
         self.username = username
 
     def run(self):
+        input_thread = InputReader(self.username, True, self.socket)
         try:
             self.socket.connect(self.address)
             self.connected = True
-            input_thread = InputReader(self.username, True, self.socket)
             input_thread.start()
             while 1:
                 message_received = self.socket.recv(BUFFER_SIZE).decode()
                 print(message_received)
-        except:
-            print("Who you connected to is not online anymore.")
+        except socket.error:
+            print("Who you connected to is not online.")
             input_thread.connected = False
 
 
@@ -66,33 +67,52 @@ class InputReader(threading.Thread):
             prefix = self.username + ": "
             self.connection.send((prefix + message).encode())
 
-socket_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-socket_server.connect((SERVER_TCP_IP, SERVER_TCP_PORT))
+def exit_handler(client_id, server_socket):
+    server_socket.connect((SERVER_TCP_IP, SERVER_TCP_PORT))
+    server_socket.send('disconnect'.encode())
+    server_socket.send(client_id)
 
+
+server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server_socket.connect((SERVER_TCP_IP, SERVER_TCP_PORT))
 ### ASKING USERNAME AND SHOWING LISTS OF USERS ONLINE.
 name = input("Welcome to ZIPZAPLERSON! Your username, sir: ")
-socket_server.send(name.encode())
 
-my_port = int(socket_server.recv(BUFFER_SIZE).decode())
+server_socket.send('connect'.encode())
+server_socket.send(name.encode())
 
-users_online = socket_server.recv(BUFFER_SIZE).decode()
+my_info = server_socket.recv(BUFFER_SIZE).decode().split(',')
+my_port = int(my_info[1])
+my_id = my_info[0].encode()
+
+users_online = server_socket.recv(BUFFER_SIZE).decode()
 print(users_online)
 
 choice = ''
 
 while (choice != 'c' and choice != 'w'): 
     choice = input("Do you want to connect to someone or wait a connection? (c/w) ")
+
     if choice == 'c':
-        print("here")
         user_chosen = input("Type the number of who you want to connect to: ")
-        socket_server.send(user_chosen.encode())
-        address = socket_server.recv(BUFFER_SIZE).decode().split(',')
-        Opener(name, (address[0], int(address[1]))).run()
+        server_socket.send(user_chosen.encode())
+        address = server_socket.recv(BUFFER_SIZE)
+        if address[0:1] == b'\x11' or address[0:1] == b'\x12':
+            # server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # server_socket.connect((SERVER_TCP_IP, SERVER_TCP_PORT))
+            # server_socket.send("users".encode())
+            # users_online = server_socket.recv(BUFFER_SIZE).decode()
+            # print(users_online)
+            print(address.decode())
+            choice = ''
+        else:
+            address = address.decode().split(',')
+            Opener(name, (address[0], int(address[1]))).run()
     elif choice == 'w':
         print("Waiting...")
-        socket_server.send('no'.encode())
-        listen_client = Listener(name, my_port)
-        listen_client.listen()
-        listen_client.run()
+        server_socket.send('wait'.encode())
+        Listener(name, my_port).run()
     else:
         print("Invalid command")
+
+atexit.register(exit_handler, client_id=my_id, server_socket=server_socket)
