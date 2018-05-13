@@ -6,10 +6,9 @@ SERVER_TCP_IP = '127.0.0.1'
 SERVER_TCP_PORT = 5000
 BUFFER_SIZE = 1024
 
-class Listener(threading.Thread): 
+class Listener(): 
 
     def __init__(self, username, port):
-        super().__init__()
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.port = port
         self.connected = False
@@ -33,10 +32,9 @@ class Listener(threading.Thread):
             except:
                 print("Who you connected to is not online anymore.")
 
-class Opener(threading.Thread): 
+class Opener(): 
 
     def __init__(self, username, address):
-        super().__init__()
         self.address = address
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.connected = False
