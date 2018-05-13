@@ -11,7 +11,6 @@ class Listener():
     def __init__(self, username, port):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.port = port
-        self.connected = False
         self.username = username
 
     def listen(self):
@@ -22,8 +21,7 @@ class Listener():
         while 1:
             try: 
                 connection, addr = self.socket.accept()
-                self.connected = True
-                print(connection)
+                print("Hey, someone connected with you!")
                 input_thread = InputReader(self.username, True, connection)
                 input_thread.start()
                 while 1: 
@@ -39,7 +37,6 @@ class Opener():
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.connected = False
         self.username = username
-        print(address)
 
     def run(self):
         try:
@@ -52,6 +49,7 @@ class Opener():
                 print(message_received)
         except:
             print("Who you connected to is not online anymore.")
+            input_thread.connected = False
 
 
 class InputReader(threading.Thread):
@@ -71,7 +69,7 @@ class InputReader(threading.Thread):
 socket_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 socket_server.connect((SERVER_TCP_IP, SERVER_TCP_PORT))
 
-### GIVING USERNAME AND SHOWING LISTS OF USERS ONLINE.
+### ASKING USERNAME AND SHOWING LISTS OF USERS ONLINE.
 name = input("Welcome to ZIPZAPLERSON! Your username, sir: ")
 socket_server.send(name.encode())
 
