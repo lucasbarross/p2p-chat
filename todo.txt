@@ -1,0 +1,3 @@
+- ajeitar ID unico para o username e tratar caso username ja esteja em uso
+
+- desconectar os dois integrantes do server quando a conversa terminar
