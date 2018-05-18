@@ -4,14 +4,13 @@ def parse_address(addr):
 def parse_clients(clients):
     people_connected_string = "People connected to ZapZiplerson:\n\n"
     i = 0
-    for client in clients:
-        people_connected_string += str(i) + ' ' + client[0] + '\n'
+    for client_id, info in clients.items():
+        people_connected_string += str(i) + ' ' + info[1] + '\n'
         i+=1
     return people_connected_string    
 
-def already_connected_checker(c1, c2, connection):
-    print(connection)
-    if c1 in connection or c2 in connection: 
+def already_connected_checker(c1, connection):
+    if c1 in connection: 
         return True
     else:
         return False
@@ -22,48 +21,50 @@ def remove_client_connections(id, conn):
     else:
         return True
 
-def listen_client(clients, connections, buffer_size, conn, addr):
-    try:
+def remove_client(id, client): 
+    if(client[0] == id):
+        return False
+    else:
+        return True
+
+def listen_client(clients, buffer_size, conn, addr, socket):
         while 1:
             request = conn.recv(buffer_size).decode()
-            
-            if not request: break
-            
+
             if request == 'connect': 
                 client_username = conn.recv(buffer_size).decode()
-                client_id = len(clients)-1
-                info = (str(client_username), conn, addr)
-                clients.append(info)
-                conn.send((str(client_id) + ',' + str(info[2][1])).encode())
-                print(str(info[0]) + ' connected')
-            
+                client_id = len(clients)+1
+                info = (client_id, str(client_username), conn, addr)
+                clients[client_id] = info
+                conn.send((str(client_id) + ',' + str(info[3][1])).encode())
+                print(str(info[1]) + ' connected')
+                while 1:
+                    try: 
+                        socket.timeout(3)
+                        confirmation = conn.recv(buffer_size).decode()
+                    except:
+                        if client_id in clients:
+                            del clients[client_id]
+                        break
+                break
+
             elif request == 'connect_to':
-                want_to_connect = int(conn.recv(buffer_size).decode())
                 try:
-                    if client_id == want_to_connect:
-                        raise ValueError('You can not connect with you!')
-                    
-                    verification = list(filter(lambda cnn: already_connected_checker(client_id, want_to_connect, cnn), connections))
-                    
-                    if len(verification) == 0:
-                        conn.send((parse_address(clients[int(want_to_connect)][2])).encode())
-                        connections.append([client_id, want_to_connect])
+                    listener = int(conn.recv(buffer_size).decode())
+                    keys_list = list(clients.keys())
+                    if listener < len(keys_list) and listener >= 0:
+                        listener = clients[keys_list[listener]]
+                        conn.send((parse_address(listener[3])).encode())
+                        del clients[listener[0]]
+                        break
                     else: 
-                        raise ValueError('User already connected to someone else!')
+                        raise ValueError('This user is not available!')
+                
                 except ValueError as err:
                     conn.send(b'\x11' + str(err).encode())
-                except Exception:
+                except Exception as err:
+                    print(err)
                     conn.send(b'\x12' + "Invalid user id, please restart your connection".encode())
-            
-            elif request == 'disconnect':
-                print("Disconnected")
-                client_id = int(conn.recv(buffer_size).decode())
-                clients.pop(client_id)
-                connections = list(filter(lambda cnn: remove_client_connections(client_id, cnn), connections))
-                conn.close()
-                break
-            
             elif request == 'users': 
-                conn.send(parse_clients(clients).encode())
-    except ConnectionResetError:
-        print("Someone brutally disconnected.")    
+                conn.send(parse_clients(clients).encode())  
+        

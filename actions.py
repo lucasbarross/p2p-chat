@@ -1,8 +1,8 @@
 def disconnect(id, server_socket, buffer_size = 1024):
     server_socket.send('disconnect'.encode())
-    server_socket.send(id)
+    server_socket.send(id.encode())
 
-def choose_user(server_socket, buffer_size = 1024):
+def choose_user(client_id, server_socket, buffer_size = 1024):
     user_chosen = input("Type the number of who you want to connect to: ")
     server_socket.send('connect_to'.encode())
     server_socket.send(user_chosen.encode())
@@ -14,11 +14,10 @@ def ask_users(server_socket, buffer_size = 1024):
     users_online = server_socket.recv(buffer_size).decode()
     print(users_online)
 
-def connect(server_socket, buffer_size = 1024):
-    name = input("Welcome to ZIPZAPLERSON! Your username, sir: ")
+def connect(server_socket, name, buffer_size = 1024):
     server_socket.send('connect'.encode())
     server_socket.send(name.encode())
     info = server_socket.recv(buffer_size).decode().split(',')
     port = int(info[1])
-    id = info[0].encode()
-    return {name: name, id: id, port: port}
+    id = info[0]
+    return {id: id, port: port}

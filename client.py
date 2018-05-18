@@ -1,7 +1,9 @@
 import socket
 import threading
 import atexit
+import time
 
+from datetime import datetime
 from actions import connect, disconnect, choose_user, ask_users
 
 SERVER_TCP_IP = '127.0.0.1'
@@ -15,17 +17,28 @@ class Listener():
         self.username = username
         self.port = port
         self.id = id
+        self.connected = False
 
     def listen(self):
         self.socket.bind(('127.0.0.1', self.port))
         self.socket.listen()
 
+    def send_confirmation_packet(self):
+        while not self.connected:
+            time.sleep(2)
+            if not self.connected:
+                self.server_socket.send("Ok!".encode())
+
     def run(self):
         self.listen()
         input_thread = None
+        #next_time = datetime.now() + 2000
         while 1:
-            try: 
+            try:
+                threading.Thread(target = self.send_confirmation_packet).start()
                 connection, addr = self.socket.accept()
+                self.connected = True
+                self.server_socket.close()
                 print("Hey, someone connected with you!")
                 input_thread = InputReader(self.username, True, connection)
                 input_thread.start()
@@ -35,7 +48,6 @@ class Listener():
             except:
                 input_thread.flag(False)
                 print("Who you connected to is not online anymore.")
-                disconnect(self.id, self.server_socket)
                 break
 class Opener(): 
 
@@ -52,6 +64,7 @@ class Opener():
         try:
             self.socket.connect(self.address)
             self.connected = True
+            self.server_socket.close()
             input_thread.start()
             while 1:
                 message_received = self.socket.recv(BUFFER_SIZE).decode()
@@ -85,17 +98,15 @@ server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.connect((SERVER_TCP_IP, SERVER_TCP_PORT))
 ### ASKING USERNAME AND SHOWING LISTS OF USERS ONLINE.
 
-my_info = connect(server_socket)
-name, id, port = my_info
-
+name = input("Welcome to ZapZiplerson! Your username, sir: ")
 ask_users(server_socket)
 choice = ''
 
 while (choice != 'c' and choice != 'w'): 
-    choice = input("Do you want to connect to someone or wait a connection? (c/w) ")
+    choice = input("Do you want to connect to someone, wait a connection or refresh online users list? (c/w/r) ")
 
     if choice == 'c':
-        address = choose_user(server_socket)
+        address = choose_user(id, server_socket)
         if address[0:1] == b'\x11' or address[0:1] == b'\x12':
             ask_users(server_socket)
             print(address.decode())
@@ -104,8 +115,12 @@ while (choice != 'c' and choice != 'w'):
             address = address.decode().split(',')
             Opener(name, (address[0], int(address[1])), id, server_socket).run()
     elif choice == 'w':
+        my_info = connect(server_socket, name)
+        id, port = my_info
         print("Waiting...")
         Listener(name, port, id, server_socket).run()
+    elif choice == 'r':
+        ask_users(server_socket)
     else:
         print("Invalid command")
 
