@@ -4,7 +4,7 @@ import atexit
 import time
 
 from datetime import datetime
-from actions import connect, disconnect, choose_user, ask_users
+from actions import connect, choose_user, ask_users
 
 SERVER_TCP_IP = '127.0.0.1'
 SERVER_TCP_PORT = 5000
@@ -33,8 +33,8 @@ class Listener():
         self.listen()
         input_thread = None
         #next_time = datetime.now() + 2000
-        while 1:
-            try:
+        try:
+            while 1:
                 threading.Thread(target = self.send_confirmation_packet).start()
                 connection, addr = self.socket.accept()
                 self.connected = True
@@ -45,10 +45,10 @@ class Listener():
                 while 1: 
                     message_received = connection.recv(BUFFER_SIZE).decode()
                     print(message_received)
-            except:
-                input_thread.flag(False)
-                print("Who you connected to is not online anymore.")
-                break
+        except:
+            input_thread.flag(False)
+            print("Who you connected to is not online anymore.")
+                
 class Opener(): 
 
     def __init__(self, username, address, id, server_socket):
@@ -70,7 +70,6 @@ class Opener():
                 message_received = self.socket.recv(BUFFER_SIZE).decode()
                 print(message_received)
         except socket.error:
-            disconnect(self.id, self.server_socket)
             input_thread.flag(False)
             print("Who you connected to is not online anymore.")
 

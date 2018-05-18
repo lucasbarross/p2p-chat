@@ -58,13 +58,11 @@ def listen_client(clients, buffer_size, conn, addr, socket):
                         del clients[listener[0]]
                         break
                     else: 
-                        raise ValueError('This user is not available!')
-                
+                        raise ValueError()
                 except ValueError as err:
-                    conn.send(b'\x11' + str(err).encode())
+                    conn.send(b'\x11' + 'This user is not available!'.encode())
                 except Exception as err:
-                    print(err)
-                    conn.send(b'\x12' + "Invalid user id, please restart your connection".encode())
+                    conn.send(b'\x12' + "Invalid user id".encode())
             elif request == 'users': 
                 conn.send(parse_clients(clients).encode())  
         
