@@ -1,28 +1,70 @@
-import json
-
-def parseAddress(addr):
+def parse_address(addr):
     return addr[0] + ',' + str(addr[1])
 
-def connect_client(clients, buffer_size, conn, addr): 
-    client_username = conn.recv(buffer_size).decode()
-    info = (str(client_username), conn, addr)
-    clients.append(info)
-    conn.send(str(info[2][1]).encode())
-        
+def parse_clients(clients):
     people_connected_string = "People connected to ZapZiplerson:\n\n"
     i = 0
-    for client in clients:
-        people_connected_string += str(i) + ' ' + client[0] + '\n'
+    for client_id, info in clients.items():
+        people_connected_string += str(i) + ' ' + info[1] + '\n'
         i+=1
-        
-    conn.send(people_connected_string.encode())
-    want_to_connect = conn.recv(buffer_size).decode()
+    return people_connected_string    
 
-    if want_to_connect != 'w':
-        try:
-            conn.send((parseAddress(clients[int(want_to_connect)][2])).encode())
-        except:
-            conn.send("Invalid user id, please restart your connection".encode())
-    
-    print("Closed connection with server")
-    conn.close()
+def already_connected_checker(c1, connection):
+    if c1 in connection: 
+        return True
+    else:
+        return False
+
+def remove_client_connections(id, conn):
+    if id in conn:
+        return False 
+    else:
+        return True
+
+def remove_client(id, client): 
+    if(client[0] == id):
+        return False
+    else:
+        return True
+
+def listen_client(clients, buffer_size, conn, addr, socket):
+        while 1:
+            request = conn.recv(buffer_size).decode()
+
+            if request == 'connect': 
+                client_username = conn.recv(buffer_size).decode()
+                client_id = len(clients)+1
+                info = (client_id, str(client_username), conn, addr)
+                clients[client_id] = info
+                conn.send((str(client_id) + ',' + str(info[3][1])).encode())
+                print(str(info[1]) + ' connected')
+                while 1:
+                    try: 
+                        socket.timeout(3)
+                        confirmation = conn.recv(buffer_size).decode()
+                    except:
+                        if client_id in clients:
+                            del clients[client_id]
+                        break
+                break
+
+            elif request == 'connect_to':
+                try:
+                    listener = int(conn.recv(buffer_size).decode())
+                    keys_list = list(clients.keys())
+                    if listener < len(keys_list) and listener >= 0:
+                        listener = clients[keys_list[listener]]
+                        conn.send((parse_address(listener[3])).encode())
+                        del clients[listener[0]]
+                        break
+                    else: 
+                        raise ValueError('This user is not available!')
+                
+                except ValueError as err:
+                    conn.send(b'\x11' + str(err).encode())
+                except Exception as err:
+                    print(err)
+                    conn.send(b'\x12' + "Invalid user id, please restart your connection".encode())
+            elif request == 'users': 
+                conn.send(parse_clients(clients).encode())  
+        
