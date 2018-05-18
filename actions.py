@@ -1,7 +1,3 @@
-def disconnect(id, server_socket, buffer_size = 1024):
-    server_socket.send('disconnect'.encode())
-    server_socket.send(id.encode())
-
 def choose_user(client_id, server_socket, buffer_size = 1024):
     user_chosen = input("Type the number of who you want to connect to: ")
     server_socket.send('connect_to'.encode())
