@@ -45,10 +45,8 @@ def listen_client(clients, buffer_size, conn, addr, socket):
                         socket.timeout(3)
                         confirmation = conn.recv(buffer_size).decode()
                     except:
-                        print("debug")
                         if client_id in clients:
                             del clients[client_id]
-                            print("Debug2")
                         break
                 break
 
