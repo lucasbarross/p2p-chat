@@ -63,6 +63,7 @@ class Opener():
         input_thread = InputReader(self.username, True, self.socket)
         try:
             self.socket.connect(self.address)
+            print("Server: you're connected, bye bye!")
             self.connected = True
             self.server_socket.close()
             input_thread.start()
