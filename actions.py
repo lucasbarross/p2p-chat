@@ -13,7 +13,5 @@ def ask_users(server_socket, buffer_size = 1024):
 def connect(server_socket, name, buffer_size = 1024):
     server_socket.send('connect'.encode())
     server_socket.send(name.encode())
-    info = server_socket.recv(buffer_size).decode().split(',')
-    port = int(info[1])
-    id = info[0]
-    return {'id': id, 'port': port}
+    id = server_socket.recv(buffer_size).decode()
+    return id

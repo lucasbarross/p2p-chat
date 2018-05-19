@@ -34,9 +34,10 @@ def listen_client(clients, buffer_size, conn, addr, socket):
             if request == 'connect': 
                 client_username = conn.recv(buffer_size).decode()
                 client_id = len(clients)+1
-                info = (client_id, str(client_username), conn, addr)
+                conn.send((str(client_id)).encode())
+                port = conn.recv(buffer_size).decode()
+                info = (client_id, str(client_username), conn, (addr[0], port))
                 clients[client_id] = info
-                conn.send((str(client_id) + ',' + str(info[3][1])).encode())
                 print(str(info[1]) + ' connected')
                 while 1:
                     try: 

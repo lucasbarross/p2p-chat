@@ -11,17 +11,17 @@ SERVER_TCP_PORT = 5000
 BUFFER_SIZE = 1024
 class Listener(): 
 
-    def __init__(self, username, port, id, server_socket):
+    def __init__(self, username, id, server_socket):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.server_socket = server_socket
         self.username = username
-        self.port = port
         self.id = id
         self.connected = False
 
     def listen(self):
-        self.socket.bind(('127.0.0.1', self.port))
+        self.socket.bind(('127.0.0.1', 0))
         self.socket.listen()
+        return self.socket.getsockname()[1]
 
     def send_confirmation_packet(self):
         while not self.connected:
@@ -30,7 +30,6 @@ class Listener():
                 self.server_socket.send("Ok!".encode())
 
     def run(self):
-        self.listen()
         input_thread = None
         #next_time = datetime.now() + 2000
         try:
@@ -46,8 +45,9 @@ class Listener():
                     message_received = connection.recv(BUFFER_SIZE).decode()
                     print(message_received)
         except:
-            input_thread.flag(False)
-            print("Who you connected to is not online anymore.")
+            if input_thread is not None: 
+                input_thread.flag(False)
+                print("Who you connected to is not online anymore.")
                 
 class Opener(): 
 
@@ -114,12 +114,12 @@ while (choice != 'c' and choice != 'w'):
             address = address.decode().split(',')
             Opener(name, (address[0], int(address[1])), id, server_socket).run()
     elif choice == 'w':
-        my_info = connect(server_socket, name)
-        id = my_info['id']
-        port = my_info['port']
-        print(port)
+        id = connect(server_socket, name)
+        client_server = Listener(name, id, server_socket)
+        port = client_server.listen()
+        server_socket.send(str(port).encode())
         print("Waiting...")
-        Listener(name, port, id, server_socket).run()
+        client_server.run()
     elif choice == 'r':
         ask_users(server_socket)
     else:
