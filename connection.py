@@ -28,6 +28,7 @@ def remove_client(id, client):
         return True
 
 def listen_client(clients, buffer_size, conn, addr, socket):
+    try:
         while 1:
             request = conn.recv(buffer_size).decode()
 
@@ -44,8 +45,10 @@ def listen_client(clients, buffer_size, conn, addr, socket):
                         socket.timeout(3)
                         confirmation = conn.recv(buffer_size).decode()
                     except:
+                        print("debug")
                         if client_id in clients:
                             del clients[client_id]
+                            print("Debug2")
                         break
                 break
 
@@ -66,4 +69,7 @@ def listen_client(clients, buffer_size, conn, addr, socket):
                     conn.send(b'\x12' + "Invalid user id".encode())
             elif request == 'users': 
                 conn.send(parse_clients(clients).encode())  
+    except ConnectionResetError:
+        print("Someone disconnected before selecting context.")
+
         
