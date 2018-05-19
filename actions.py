@@ -16,4 +16,4 @@ def connect(server_socket, name, buffer_size = 1024):
     info = server_socket.recv(buffer_size).decode().split(',')
     port = int(info[1])
     id = info[0]
-    return {id: id, port: port}
+    return {'id': id, 'port': port}

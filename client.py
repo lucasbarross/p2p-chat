@@ -115,7 +115,8 @@ while (choice != 'c' and choice != 'w'):
             Opener(name, (address[0], int(address[1])), id, server_socket).run()
     elif choice == 'w':
         my_info = connect(server_socket, name)
-        id, port = my_info
+        id = my_info['id']
+        port = my_info['port']
         print("Waiting...")
         Listener(name, port, id, server_socket).run()
     elif choice == 'r':
