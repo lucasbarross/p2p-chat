@@ -11,7 +11,7 @@ clients = {}
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.bind(('', TCP_PORT))
 s.listen(1)
-print(f"Im listening on port {TCP_PORT}")
+print('Im listening on port ' + str(TCP_PORT))
 
 while 1:
     conn, addr = s.accept()
