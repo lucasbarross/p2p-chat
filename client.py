@@ -65,7 +65,6 @@ class Client:
                 try:
                     socket.send(message.encode())
                 except:
-                    print("erro")
                     invalid_clients.append(socket)
             
             for invalid in invalid_clients:
