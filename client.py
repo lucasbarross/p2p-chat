@@ -15,7 +15,7 @@ class Client:
     
     def listen(self):
         self.listen_socket.bind(('127.0.0.1', 0))
-        self.listen_socket.listen()
+        self.listen_socket.listen(1)
         return self.listen_socket.getsockname()
     
     def wait(self):
