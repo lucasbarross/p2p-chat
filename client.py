@@ -1,129 +1,84 @@
-import socket
+import socket, pickle
 import threading
-import atexit
 import time
-
-from datetime import datetime
-from actions import connect, choose_user, ask_users
 
 SERVER_TCP_IP = '127.0.0.1'
 SERVER_TCP_PORT = 5000
 BUFFER_SIZE = 1024
-class Listener(): 
 
-    def __init__(self, username, id, server_socket):
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_socket = server_socket
-        self.username = username
-        self.id = id
-        self.connected = False
+class Client:
 
-    def listen(self):
-        self.socket.bind(('127.0.0.1', 0))
-        self.socket.listen()
-        return self.socket.getsockname()[1]
-
-    def send_confirmation_packet(self):
-        while not self.connected:
-            time.sleep(2)
-            if not self.connected:
-                self.server_socket.send("Ok!".encode())
-
-    def run(self):
-        input_thread = None
-        #next_time = datetime.now() + 2000
-        try:
-            while 1:
-                threading.Thread(target = self.send_confirmation_packet).start()
-                connection, addr = self.socket.accept()
-                self.connected = True
-                self.server_socket.close()
-                print("Hey, someone connected with you!")
-                input_thread = InputReader(self.username, True, connection)
-                input_thread.start()
-                while 1: 
-                    message_received = connection.recv(BUFFER_SIZE).decode()
-                    print(message_received)
-        except:
-            if input_thread is not None: 
-                input_thread.flag(False)
-                print("Who you connected to is not online anymore.")
-                
-class Opener(): 
-
-    def __init__(self, username, address, id, server_socket):
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_socket = server_socket
-        self.address = address
-        self.connected = False
-        self.username = username
-        self.id = id
-
-    def run(self):
-        input_thread = InputReader(self.username, True, self.socket)
-        try:
-            self.socket.connect(self.address)
-            print("Server: you're connected, bye bye!")
-            self.connected = True
-            self.server_socket.close()
-            input_thread.start()
-            while 1:
-                message_received = self.socket.recv(BUFFER_SIZE).decode()
-                print(message_received)
-        except socket.error:
-            input_thread.flag(False)
-            print("Who you connected to is not online anymore.")
-
-class InputReader(threading.Thread):
-
-    def __init__(self, username, connected, connection):
-        super().__init__()
-        self.connected = connected
-        self.connection = connection
-        self.username = username
+    def __init__(self):
+        self.users = []
+        self.sockets = []
+        self.listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     
-    def flag(self, bool):
-        self.connected = bool
+    def listen(self):
+        self.listen_socket.bind(('127.0.0.1', 0))
+        self.listen_socket.listen()
+        return self.listen_socket.getsockname()
+    
+    def wait(self):
+        print("You`re connected to ZapZiplerson.")
+        while 1:
+            conn, addr = self.listen_socket.accept()
+            self.sockets.append(conn)
+            threading.Thread(target = self.get_messages, args=[conn]).start()
+        
+    def get_messages(self, socket):
+        try:
+            while 1:
+                message_received = socket.recv(BUFFER_SIZE).decode()
+                print(message_received)
+        except ConnectionResetError:
+            print('Someone disconnected.')
+    
+    def confirmation_packet(self, server_socket):
+        try: 
+            while 1:
+                time.sleep(2)
+                server_socket.send('ok'.encode())
+        except ConnectionResetError:
+            print("Alert: server is not online anymore, by luck this is a P2P app.")
+    
+    def connect(self, server_socket):
+        
+        for user in self.users:
+            conn_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.sockets.append(conn_socket)
+            conn_socket.connect(user)
 
-    def run(self):
+        for sock in self.sockets:
+            threading.Thread(target = self.get_messages, args=[sock]).start()
+
+        threading.Thread(target = self.wait).start()
+        threading.Thread(target = self.confirmation_packet, args = [server_socket]).start()
+        threading.Thread(target = self.send_message).start()
+    
+    def send_message(self):
+        
         while 1:
             message = input()
-            if self.connected:
-                prefix = self.username + ": "
-                self.connection.send((prefix + message).encode())
-            else:
-                break
+            invalid_clients = []
+
+            for index, socket in enumerate(self.sockets):
+                try:
+                    socket.send(message.encode())
+                except:
+                    invalid_clients.append(index)
+            
+            for invalid in invalid_clients:
+                self.sockets.pop(invalid)
+
+    def set_users(self, users):
+        self.users = users
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server_socket.connect((SERVER_TCP_IP, SERVER_TCP_PORT))
-### ASKING USERNAME AND SHOWING LISTS OF USERS ONLINE.
-
-name = input("Welcome to ZapZiplerson! Your username, sir: ")
-ask_users(server_socket)
-choice = ''
-
-while (choice != 'c' and choice != 'w'): 
-    choice = input("Do you want to connect to someone, wait a connection or refresh online users list? (c/w/r) ")
-
-    if choice == 'c':
-        address = choose_user(id, server_socket)
-        if address[0:1] == b'\x11' or address[0:1] == b'\x12':
-            ask_users(server_socket)
-            print(address.decode())
-            choice = ''
-        else:
-            address = address.decode().split(',')
-            Opener(name, (address[0], int(address[1])), id, server_socket).run()
-    elif choice == 'w':
-        id = connect(server_socket, name)
-        client_server = Listener(name, id, server_socket)
-        port = client_server.listen()
-        server_socket.send(str(port).encode())
-        print("Waiting...")
-        client_server.run()
-    elif choice == 'r':
-        ask_users(server_socket)
-    else:
-        print("Invalid command")
-
-    
+client = Client()
+info = pickle.dumps(client.listen())
+server_socket.send(info)
+connected_arr = server_socket.recv(BUFFER_SIZE)
+connected_arr = pickle.loads(connected_arr)
+client.set_users(connected_arr)
+client.connect(server_socket)
