@@ -65,10 +65,11 @@ class Client:
                 try:
                     socket.send(message.encode())
                 except:
-                    invalid_clients.append(index)
+                    print("erro")
+                    invalid_clients.append(socket)
             
             for invalid in invalid_clients:
-                self.sockets.pop(invalid)
+                self.sockets.pop(self.sockets.index(invalid))
 
     def set_users(self, users):
         self.users = users
